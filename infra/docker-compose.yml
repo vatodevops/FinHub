@@ -1,0 +1,16 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16
+    container_name: finhub-postgres
+    environment:
+      POSTGRES_DB: finhub
+      POSTGRES_USER: finhub
+      POSTGRES_PASSWORD: finhub_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
