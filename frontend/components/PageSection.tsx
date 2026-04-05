@@ -1,15 +1,14 @@
 import type { ReactNode } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export function PageSection({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <section className="panel">
-      <div className="section-head">
-        <div>
-          <h2>{title}</h2>
-          {subtitle ? <div className="muted small">{subtitle}</div> : null}
-        </div>
-      </div>
-      {children}
-    </section>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle>{title}</CardTitle>
+        {subtitle ? <CardDescription>{subtitle}</CardDescription> : null}
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   );
 }

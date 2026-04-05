@@ -1,26 +1,28 @@
 import Link from 'next/link';
-
-import { PageSection } from '../../../../components/PageSection';
-import { Topbar } from '../../../../components/Topbar';
+import { Button } from '@/components/ui/button';
+import { PageSection } from '@/components/PageSection';
+import { Topbar } from '@/components/Topbar';
 
 export default async function GoCardlessCallbackPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
   const requisitionId = typeof params.ref === 'string' ? params.ref : typeof params.requisition_id === 'string' ? params.requisition_id : null;
 
   return (
-    <main className="page">
-      <Topbar title="Conexión bancaria devuelta" subtitle="El banco te ha devuelto al frontend; ahora toca refrescar y sincronizar la conexión." />
-      <PageSection title="Siguiente paso" subtitle="FinHub aún no ata el callback automáticamente a una fila concreta, pero ya te deja volver a Conexiones y darle refresh/sync.">
-        <div className="section-stack">
-          <div className="list-item">
-            <strong>Referencia recibida:</strong> {requisitionId || '—'}
+    <div className="max-w-[1440px] mx-auto">
+      <Topbar title="Conexion bancaria devuelta" subtitle="El banco te ha devuelto al frontend; ahora toca refrescar y sincronizar la conexion." />
+      <PageSection title="Siguiente paso" subtitle="FinHub aun no ata el callback automaticamente a una fila concreta, pero ya te deja volver a Conexiones y darle refresh/sync.">
+        <div className="grid gap-4">
+          <div className="px-3.5 py-3 rounded-xl border border-border bg-white/[0.02]">
+            <strong>Referencia recibida:</strong> {requisitionId || '\u2014'}
           </div>
-          <div className="small muted">Si la autorización ha ido bien, vuelve a Conexiones, pulsa <strong>Refresh</strong> y luego <strong>Sync</strong>.</div>
+          <p className="text-sm text-muted-foreground">Si la autorizacion ha ido bien, vuelve a Conexiones, pulsa <strong>Refresh</strong> y luego <strong>Sync</strong>.</p>
           <div>
-            <Link href="/connections" className="button">Volver a Conexiones</Link>
+            <Button asChild>
+              <Link href="/connections">Volver a Conexiones</Link>
+            </Button>
           </div>
         </div>
       </PageSection>
-    </main>
+    </div>
   );
 }

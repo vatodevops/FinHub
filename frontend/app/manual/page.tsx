@@ -1,7 +1,9 @@
-import { ManualPlannedForm } from '../../components/ManualPlannedForm';
-import { PageSection } from '../../components/PageSection';
-import { Topbar } from '../../components/Topbar';
-import { api } from '../../lib/api';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ManualPlannedForm } from '@/components/ManualPlannedForm';
+import { PageSection } from '@/components/PageSection';
+import { Topbar } from '@/components/Topbar';
+import { api } from '@/lib/api';
 
 function money(value: string) {
   const n = Number(value || 0);
@@ -12,27 +14,35 @@ export default async function ManualPage() {
   const items = await api.manualPlannedItems();
 
   return (
-    <main className="page">
-      <Topbar title="Gastos manuales" subtitle="Para cosas como peluquería, efectivo, pagos informales o previsiones tuyas." />
-      <div className="section-stack">
+    <div className="max-w-[1440px] mx-auto">
+      <Topbar title="Gastos manuales" subtitle="Para cosas como peluqueria, efectivo, pagos informales o previsiones tuyas." />
+      <div className="grid gap-4">
         <ManualPlannedForm />
-        <PageSection title="Listado manual" subtitle="Aquí aparecerán tus gastos creados a mano.">
-          <table className="table">
-            <thead><tr><th>Nombre</th><th>Fecha</th><th>Regla</th><th>Estado</th><th>Importe</th></tr></thead>
-            <tbody>
+        <PageSection title="Listado manual" subtitle="Aqui apareceran tus gastos creados a mano.">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Regla</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Importe</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {items.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.name}</td>
-                  <td>{item.expected_date || '—'}</td>
-                  <td>{item.recurrence_rule || item.kind}</td>
-                  <td><span className="badge">{item.status}</span></td>
-                  <td>{money(item.amount)}</td>
-                </tr>
+                <TableRow key={item.id}>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell>{item.expected_date || '\u2014'}</TableCell>
+                  <TableCell>{item.recurrence_rule || item.kind}</TableCell>
+                  <TableCell><Badge variant="outline">{item.status}</Badge></TableCell>
+                  <TableCell>{money(item.amount)}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </PageSection>
       </div>
-    </main>
+    </div>
   );
 }

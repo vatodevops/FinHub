@@ -1,3 +1,5 @@
+import { Badge } from '@/components/ui/badge';
+
 type Institution = {
   id: string;
   name: string;
@@ -7,14 +9,14 @@ type Institution = {
 
 export function InstitutionsList({ institutions }: { institutions: Institution[] }) {
   return (
-    <div className="list">
+    <div className="grid gap-2.5">
       {institutions.map((item) => (
-        <div key={item.id} className="list-item row-between">
-          <div className="stack-xs">
+        <div key={item.id} className="flex justify-between items-center gap-3 px-3.5 py-3 rounded-xl border border-border bg-white/[0.02]">
+          <div className="grid gap-1">
             <strong>{item.name}</strong>
-            <span className="muted small">{item.id}</span>
+            <span className="text-muted-foreground text-sm">{item.id}</span>
           </div>
-          <span className="badge">{item.countries?.[0] || 'ES'}</span>
+          <Badge variant="outline">{item.countries?.[0] || 'ES'}</Badge>
         </div>
       ))}
     </div>

@@ -1,4 +1,6 @@
-import type { CurveDuplicateCandidate } from '../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { CurveDuplicateCandidate } from '@/lib/api';
 
 function money(value: string) {
   const n = Number(value || 0);
@@ -7,21 +9,32 @@ function money(value: string) {
 
 export function CurveDuplicatesPanel({ items }: { items: CurveDuplicateCandidate[] }) {
   return (
-    <div className="panel">
-      <h2>Posibles duplicados Curve</h2>
-      <table className="table">
-        <thead><tr><th>Confidence</th><th>Curve</th><th>Banco</th><th>Importe</th></tr></thead>
-        <tbody>
-          {items.map((item, idx) => (
-            <tr key={`${item.curve_transaction.id}-${item.bank_transaction.id}-${idx}`}>
-              <td>{Math.round(item.confidence * 100)}%</td>
-              <td>{item.curve_transaction.merchant_clean || item.curve_transaction.merchant_raw || '—'}</td>
-              <td>{item.bank_transaction.description_raw || item.bank_transaction.merchant_raw || '—'}</td>
-              <td>{money(item.bank_transaction.amount)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle>Posibles duplicados Curve</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Confidence</TableHead>
+              <TableHead>Curve</TableHead>
+              <TableHead>Banco</TableHead>
+              <TableHead>Importe</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item, idx) => (
+              <TableRow key={`${item.curve_transaction.id}-${item.bank_transaction.id}-${idx}`}>
+                <TableCell>{Math.round(item.confidence * 100)}%</TableCell>
+                <TableCell>{item.curve_transaction.merchant_clean || item.curve_transaction.merchant_raw || '\u2014'}</TableCell>
+                <TableCell>{item.bank_transaction.description_raw || item.bank_transaction.merchant_raw || '\u2014'}</TableCell>
+                <TableCell>{money(item.bank_transaction.amount)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

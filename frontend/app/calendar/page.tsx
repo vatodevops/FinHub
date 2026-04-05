@@ -1,7 +1,9 @@
-import { MonthlyCalendar } from '../../components/MonthlyCalendar';
-import { PageSection } from '../../components/PageSection';
-import { Topbar } from '../../components/Topbar';
-import { api } from '../../lib/api';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MonthlyCalendar } from '@/components/MonthlyCalendar';
+import { PageSection } from '@/components/PageSection';
+import { Topbar } from '@/components/Topbar';
+import { api } from '@/lib/api';
 
 function money(value: string) {
   const n = Number(value || 0);
@@ -36,54 +38,69 @@ export default async function CalendarPage() {
   ];
 
   return (
-    <main className="page">
-      <Topbar title="Calendario" subtitle="Vista mensual real con lo que debería cobrarse o pagarse en cada día." />
-      <div className="section-stack">
+    <div className="max-w-[1440px] mx-auto">
+      <Topbar title="Calendario" subtitle="Vista mensual real con lo que deberia cobrarse o pagarse en cada dia." />
+      <div className="grid gap-4">
         <MonthlyCalendar items={calendarItems} year={now.getFullYear()} monthIndex={now.getMonth()} />
 
-        <div className="grid cols-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <PageSection title="Series recurrentes" subtitle="Patrones aprendidos o confirmados por el sistema.">
-            <table className="table">
-              <thead><tr><th>Serie</th><th>Frecuencia</th><th>Día</th><th>Próxima</th><th>Importe</th></tr></thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Serie</TableHead>
+                  <TableHead>Frecuencia</TableHead>
+                  <TableHead>Dia</TableHead>
+                  <TableHead>Proxima</TableHead>
+                  <TableHead>Importe</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {recurringSeries.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.name}</td>
-                    <td>{item.recurrence_type}</td>
-                    <td>{item.typical_day_of_month || '—'}</td>
-                    <td>{item.next_expected_date || '—'}</td>
-                    <td>{item.amount_mean ? money(item.amount_mean) : '—'}</td>
-                  </tr>
+                  <TableRow key={item.id}>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.recurrence_type}</TableCell>
+                    <TableCell>{item.typical_day_of_month || '\u2014'}</TableCell>
+                    <TableCell>{item.next_expected_date || '\u2014'}</TableCell>
+                    <TableCell>{item.amount_mean ? money(item.amount_mean) : '\u2014'}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </PageSection>
 
-          <PageSection title="Agenda detallada" subtitle="Lista clásica debajo del calendario visual.">
-            <table className="table">
-              <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Importe</th></tr></thead>
-              <tbody>
+          <PageSection title="Agenda detallada" subtitle="Lista clasica debajo del calendario visual.">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Detalle</TableHead>
+                  <TableHead>Importe</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {recurringCalendar.map((occ) => (
-                  <tr key={occ.id}>
-                    <td>{occ.expected_date}</td>
-                    <td><span className="badge">recurrente</span></td>
-                    <td>{occ.status}</td>
-                    <td>{occ.expected_amount ? money(occ.expected_amount) : '—'}</td>
-                  </tr>
+                  <TableRow key={occ.id}>
+                    <TableCell>{occ.expected_date}</TableCell>
+                    <TableCell><Badge variant="outline">recurrente</Badge></TableCell>
+                    <TableCell>{occ.status}</TableCell>
+                    <TableCell>{occ.expected_amount ? money(occ.expected_amount) : '\u2014'}</TableCell>
+                  </TableRow>
                 ))}
                 {manualItems.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.expected_date || '—'}</td>
-                    <td><span className="badge">manual</span></td>
-                    <td>{item.name}</td>
-                    <td>{money(item.amount)}</td>
-                  </tr>
+                  <TableRow key={item.id}>
+                    <TableCell>{item.expected_date || '\u2014'}</TableCell>
+                    <TableCell><Badge variant="outline">manual</Badge></TableCell>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{money(item.amount)}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </PageSection>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -2,36 +2,58 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Wallet,
+  ArrowLeftRight,
+  CalendarDays,
+  PenLine,
+  Plug,
+  TrendingUp,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const items = [
-  { href: '/', label: 'Dashboard', icon: '◫' },
-  { href: '/accounts', label: 'Cuentas', icon: '◩' },
-  { href: '/transactions', label: 'Transacciones', icon: '↹' },
-  { href: '/calendar', label: 'Calendario', icon: '◷' },
-  { href: '/manual', label: 'Gastos manuales', icon: '✎' },
-  { href: '/connections', label: 'Conexiones', icon: '◎' },
-  { href: '/investments', label: 'Inversiones', icon: '◈' },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/accounts', label: 'Cuentas', icon: Wallet },
+  { href: '/transactions', label: 'Transacciones', icon: ArrowLeftRight },
+  { href: '/calendar', label: 'Calendario', icon: CalendarDays },
+  { href: '/manual', label: 'Gastos manuales', icon: PenLine },
+  { href: '/connections', label: 'Conexiones', icon: Plug },
+  { href: '/investments', label: 'Inversiones', icon: TrendingUp },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sidebar">
-      <div className="brand">
-        <div className="brand-mark">F</div>
+    <aside className="bg-linear-to-b from-sidebar to-[#0a1020] border-r border-sidebar-border p-5 sticky top-0 h-screen max-lg:static max-lg:h-auto">
+      <div className="flex items-center gap-3 mb-6 px-2 py-1.5">
+        <div className="w-10 h-10 grid place-items-center rounded-xl bg-linear-to-b from-[#7aaeff] to-[#4779ff] text-[#07111f] font-black">
+          F
+        </div>
         <div>
-          <div className="brand-title">FinHub</div>
-          <div className="brand-subtitle">Workspace financiero</div>
+          <div className="font-extrabold text-foreground">FinHub</div>
+          <div className="text-muted-foreground text-sm">Workspace financiero</div>
         </div>
       </div>
 
-      <nav className="nav">
+      <nav className="grid gap-1.5">
         {items.map((item) => {
           const active = pathname === item.href;
+          const Icon = item.icon;
           return (
-            <Link key={item.href} href={item.href} className={`nav-item ${active ? 'active' : ''}`}>
-              <span className="nav-icon">{item.icon}</span>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-muted-foreground transition-colors duration-150',
+                active
+                  ? 'bg-accent/12 text-foreground border border-accent/18'
+                  : 'border border-transparent hover:bg-accent/8 hover:text-foreground'
+              )}
+            >
+              <Icon className="w-[18px] h-[18px] opacity-90" />
               <span>{item.label}</span>
             </Link>
           );

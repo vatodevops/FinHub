@@ -1,7 +1,7 @@
 import './globals.css';
 import type { ReactNode } from 'react';
 
-import { Sidebar } from '../components/Sidebar';
+import { Sidebar } from '@/components/Sidebar';
 
 export const metadata = {
   title: 'FinHub',
@@ -10,11 +10,11 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" className="dark">
       <body>
-        <div className="app-shell">
+        <div className="min-h-screen grid grid-cols-1 lg:grid-cols-[260px_1fr]">
           <Sidebar />
-          <div className="content-shell">{children}</div>
+          <main className="p-6">{children}</main>
         </div>
       </body>
     </html>

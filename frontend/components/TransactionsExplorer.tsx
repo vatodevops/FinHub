@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from 'react';
 
-import { api, type Category, type CurveDuplicateCandidate, type Transaction } from '../lib/api';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { api, type Category, type CurveDuplicateCandidate, type Transaction } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { CurveDuplicatesPanel } from './CurveDuplicatesPanel';
 
 function money(value: string) {
@@ -54,77 +60,83 @@ export function TransactionsExplorer({
   }
 
   return (
-    <div className="section-stack">
-      <div className="panel">
-        <h2>Explorador de transacciones</h2>
-        <div className="form-inline" style={{ gridTemplateColumns: '2fr 1fr 1fr auto auto' }}>
-          <input className="input" placeholder="Buscar por merchant, descripción o categoría" value={query} onChange={(e) => setQuery(e.target.value)} />
-          <select className="select" value={channel} onChange={(e) => setChannel(e.target.value)}>
-            <option value="all">Todos los canales</option>
-            <option value="card">Card</option>
-            <option value="transfer">Transfer</option>
-            <option value="direct_debit">Direct debit</option>
-            <option value="other">Other</option>
-          </select>
-          <select className="select" value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
-            <option value="all">Todos los orígenes</option>
-            <option value="bank">Bank</option>
-            <option value="curve">Curve</option>
-          </select>
-          <button className={`button secondary ${curveOnly ? 'is-active' : ''}`} onClick={() => setCurveOnly((v) => !v)}>
-            {curveOnly ? 'Duplicados Curve: ON' : 'Duplicados Curve'}
-          </button>
-          <div className="badge">{filtered.length} filas</div>
-        </div>
-      </div>
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Explorador de transacciones</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto_auto] gap-2.5">
+            <Input placeholder="Buscar por merchant, descripcion o categoria" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <select className="flex h-9 w-full rounded-md border border-border bg-input px-3 py-1 text-sm text-foreground" value={channel} onChange={(e) => setChannel(e.target.value)}>
+              <option value="all">Todos los canales</option>
+              <option value="card">Card</option>
+              <option value="transfer">Transfer</option>
+              <option value="direct_debit">Direct debit</option>
+              <option value="other">Other</option>
+            </select>
+            <select className="flex h-9 w-full rounded-md border border-border bg-input px-3 py-1 text-sm text-foreground" value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
+              <option value="all">Todos los origenes</option>
+              <option value="bank">Bank</option>
+              <option value="curve">Curve</option>
+            </select>
+            <Button variant={curveOnly ? 'default' : 'secondary'} onClick={() => setCurveOnly((v) => !v)}>
+              {curveOnly ? 'Duplicados Curve: ON' : 'Duplicados Curve'}
+            </Button>
+            <Badge variant="outline" className="self-center">{filtered.length} filas</Badge>
+          </div>
+        </CardContent>
+      </Card>
 
       <CurveDuplicatesPanel items={duplicateCandidates} />
 
-      <div className="panel">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Merchant</th>
-              <th>Descripción</th>
-              <th>Canal</th>
-              <th>Origen</th>
-              <th>Categoría</th>
-              <th>Curve?</th>
-              <th>Importe</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((tx) => {
-              const curveDup = looksLikeCurveDuplicate(tx);
-              return (
-                <tr key={tx.id}>
-                  <td>{tx.booked_at ? tx.booked_at.slice(0, 10) : '—'}</td>
-                  <td>{tx.merchant_clean || tx.merchant_raw || '—'}</td>
-                  <td>{tx.description_raw || '—'}</td>
-                  <td>{tx.channel}</td>
-                  <td><span className="badge">{tx.source_type}</span></td>
-                  <td>
-                    <select
-                      className="select"
-                      value={tx.category_id || ''}
-                      disabled={busyTxId === tx.id}
-                      onChange={(e) => assignCategory(tx.id, e.target.value)}
-                    >
-                      <option value="">Sin categoría</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>{category.name}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>{curveDup ? <span className="badge">posible dup</span> : '—'}</td>
-                  <td className={Number(tx.amount) >= 0 ? 'positive' : 'negative'}>{money(tx.amount)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        <CardContent className="pt-5">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Merchant</TableHead>
+                <TableHead>Descripcion</TableHead>
+                <TableHead>Canal</TableHead>
+                <TableHead>Origen</TableHead>
+                <TableHead>Categoria</TableHead>
+                <TableHead>Curve?</TableHead>
+                <TableHead>Importe</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((tx) => {
+                const curveDup = looksLikeCurveDuplicate(tx);
+                return (
+                  <TableRow key={tx.id}>
+                    <TableCell>{tx.booked_at ? tx.booked_at.slice(0, 10) : '\u2014'}</TableCell>
+                    <TableCell>{tx.merchant_clean || tx.merchant_raw || '\u2014'}</TableCell>
+                    <TableCell>{tx.description_raw || '\u2014'}</TableCell>
+                    <TableCell>{tx.channel}</TableCell>
+                    <TableCell><Badge variant="outline">{tx.source_type}</Badge></TableCell>
+                    <TableCell>
+                      <select
+                        className="flex h-8 w-full rounded-md border border-border bg-input px-2 py-1 text-sm text-foreground"
+                        value={tx.category_id || ''}
+                        disabled={busyTxId === tx.id}
+                        onChange={(e) => assignCategory(tx.id, e.target.value)}
+                      >
+                        <option value="">Sin categoria</option>
+                        {categories.map((category) => (
+                          <option key={category.id} value={category.id}>{category.name}</option>
+                        ))}
+                      </select>
+                    </TableCell>
+                    <TableCell>{curveDup ? <Badge variant="destructive">posible dup</Badge> : '\u2014'}</TableCell>
+                    <TableCell className={cn(Number(tx.amount) >= 0 ? 'text-success' : 'text-destructive')}>{money(tx.amount)}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

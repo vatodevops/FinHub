@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     app_name: str = "FinHub API"
     environment: str = "development"
     database_url: str = "sqlite:///./finhub.db"
-    cors_origins: list[str] = ["*"]
+    cors_origins: list[str] = ["http://localhost:3001"]
     gocardless_base_url: str = "https://bankaccountdata.gocardless.com/api/v2"
     gocardless_secret_id: str | None = None
     gocardless_secret_key: str | None = None

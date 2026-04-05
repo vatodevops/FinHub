@@ -1,9 +1,9 @@
-import { EmptyState } from '../../components/EmptyState';
-import { ConnectionsManager } from '../../components/ConnectionsManager';
-import { InstitutionsList } from '../../components/InstitutionsList';
-import { PageSection } from '../../components/PageSection';
-import { Topbar } from '../../components/Topbar';
-import { api } from '../../lib/api';
+import { EmptyState } from '@/components/EmptyState';
+import { ConnectionsManager } from '@/components/ConnectionsManager';
+import { InstitutionsList } from '@/components/InstitutionsList';
+import { PageSection } from '@/components/PageSection';
+import { Topbar } from '@/components/Topbar';
+import { api } from '@/lib/api';
 
 export default async function ConnectionsPage() {
   const [connections, institutions] = await Promise.all([
@@ -15,9 +15,9 @@ export default async function ConnectionsPage() {
   const institutionList = Array.isArray(institutions) ? institutions.slice(0, 18) : [];
 
   return (
-    <main className="page">
-      <Topbar title="Conexiones" subtitle="Open Banking real, estado de enlaces y sincronización inicial de bancos." />
-      <div className="grid cols-2">
+    <div className="max-w-[1440px] mx-auto">
+      <Topbar title="Conexiones" subtitle="Open Banking real, estado de enlaces y sincronizacion inicial de bancos." />
+      <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-4">
         <ConnectionsManager
           initialConnections={connections}
           institutions={institutionList}
@@ -38,6 +38,6 @@ export default async function ConnectionsPage() {
           )}
         </PageSection>
       </div>
-    </main>
+    </div>
   );
 }
