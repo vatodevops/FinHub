@@ -1,6 +1,9 @@
+import uuid
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import NotFoundError
 from app.db.session import get_db
 from app.models.manual import ManualItemKind, ManualItemStatus, ManualPlannedItem
 from app.schemas.manual import ManualPlannedItemCreate, ManualPlannedItemResponse
@@ -31,3 +34,12 @@ def create_manual_planned_item(payload: ManualPlannedItemCreate, db: Session = D
     db.commit()
     db.refresh(item)
     return item
+
+
+@router.delete("/manual/planned-items/{item_id}", status_code=204)
+def delete_manual_planned_item(item_id: uuid.UUID, db: Session = Depends(get_db)):
+    item = db.query(ManualPlannedItem).filter(ManualPlannedItem.id == item_id).one_or_none()
+    if not item:
+        raise NotFoundError("manual_item_not_found")
+    db.delete(item)
+    db.commit()

@@ -22,25 +22,51 @@ from app.models.recurring import (
     RecurringSeries,
 )
 
+DEFAULT_CATEGORIES = [
+    ("Alimentacion", "alimentacion", "#56d364", "shopping-cart"),
+    ("Restaurantes", "restaurantes", "#ff9f43", "utensils"),
+    ("Transporte", "transporte", "#6ea8fe", "car"),
+    ("Hogar", "hogar", "#a78bfa", "home"),
+    ("Suministros", "suministros", "#f59e0b", "zap"),
+    ("Salud", "salud", "#ef4444", "heart"),
+    ("Ocio", "ocio", "#ec4899", "gamepad"),
+    ("Ropa", "ropa", "#8b5cf6", "shirt"),
+    ("Educacion", "educacion", "#14b8a6", "book"),
+    ("Suscripciones", "suscripciones", "#6ea8fe", "repeat"),
+    ("Seguros", "seguros", "#64748b", "shield"),
+    ("Mascotas", "mascotas", "#f97316", "paw-print"),
+    ("Regalos", "regalos", "#e879f9", "gift"),
+    ("Viajes", "viajes", "#22d3ee", "plane"),
+    ("Compras", "compras", "#ffb86b", "shopping-bag"),
+    ("Transferencias", "transferencias", "#9fb0d1", "arrow-left-right"),
+    ("Nomina", "nomina", "#22c55e", "briefcase"),
+    ("Otros ingresos", "otros-ingresos", "#10b981", "plus-circle"),
+    ("Impuestos", "impuestos", "#ef4444", "file-text"),
+    ("Otros gastos", "otros-gastos", "#94a3b8", "more-horizontal"),
+]
+
 
 def seed() -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        if db.query(Institution).count() > 0:
-            return
+        if db.query(Category).count() < len(DEFAULT_CATEGORIES):
+            existing_slugs = {c.slug for c in db.query(Category).all()}
+            for name, slug, color, icon in DEFAULT_CATEGORIES:
+                if slug not in existing_slugs:
+                    db.add(Category(name=name, slug=slug, color=color, icon=icon))
+            db.flush()
 
-        groceries = Category(name="Supermercado", slug="supermercado", color="#56d364")
-        subscriptions = Category(name="Suscripciones", slug="suscripciones", color="#6ea8fe")
-        transfers = Category(name="Transferencias", slug="transferencias", color="#9fb0d1")
-        shopping = Category(name="Compras", slug="compras", color="#ffb86b")
-        db.add_all([groceries, subscriptions, transfers, shopping])
-        db.flush()
+        if db.query(Institution).count() > 0:
+            db.commit()
+            return
 
         curve = Institution(name="Curve", provider="manual", source_type=SourceType.curve)
         bbva = Institution(name="BBVA", provider="manual", source_type=SourceType.bank)
         db.add_all([curve, bbva])
         db.flush()
+
+        shopping = db.query(Category).filter(Category.slug == "compras").first()
 
         curve_account = Account(
             institution_id=curve.id,
@@ -65,7 +91,7 @@ def seed() -> None:
         now = datetime.now(UTC)
         curve_tx = Transaction(
             account_id=curve_account.id,
-            category_id=shopping.id,
+            category_id=shopping.id if shopping else None,
             source_type=SourceType.curve,
             source_id="curve-tx-1",
             amount=Decimal("12.34"),
@@ -79,7 +105,7 @@ def seed() -> None:
         )
         bank_tx = Transaction(
             account_id=bbva_account.id,
-            category_id=shopping.id,
+            category_id=shopping.id if shopping else None,
             source_type=SourceType.bank,
             source_id="bbva-tx-1",
             amount=Decimal("12.34"),
@@ -122,8 +148,8 @@ def seed() -> None:
         db.add(
             ManualPlannedItem(
                 account_id=None,
-                name="Peluquería",
-                merchant_hint="Peluquería barrio",
+                name="Peluqueria",
+                merchant_hint="Peluqueria barrio",
                 kind=ManualItemKind.recurring,
                 amount=Decimal("18.00"),
                 currency="EUR",

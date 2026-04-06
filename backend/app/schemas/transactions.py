@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from app.models.entities import Transaction
@@ -29,6 +29,33 @@ class TransactionResponse(BaseModel):
     status: str
 
     model_config = {"from_attributes": True}
+
+
+class CreateTransactionRequest(BaseModel):
+    account_id: uuid.UUID
+    amount: Decimal
+    description: str = Field(min_length=1, max_length=500)
+    booked_at: date | None = None
+    category_id: uuid.UUID | None = None
+    channel: str = Field(default="other")
+    currency: str = Field(default="EUR", max_length=3)
+
+
+class UpdateTransactionRequest(BaseModel):
+    amount: Decimal | None = None
+    description: str | None = Field(default=None, max_length=500)
+    booked_at: date | None = None
+    category_id: uuid.UUID | None = None
+    channel: str | None = None
+
+
+class TransferRequest(BaseModel):
+    from_account_id: uuid.UUID
+    to_account_id: uuid.UUID
+    amount: Decimal = Field(gt=0)
+    description: str = Field(default="Transferencia entre cuentas", max_length=500)
+    booked_at: date | None = None
+    currency: str = Field(default="EUR", max_length=3)
 
 
 def tx_payload(tx: Transaction) -> dict:

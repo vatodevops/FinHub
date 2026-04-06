@@ -6,10 +6,9 @@ import {
   LayoutDashboard,
   Wallet,
   ArrowLeftRight,
-  CalendarDays,
-  PenLine,
-  Plug,
-  TrendingUp,
+  PiggyBank,
+  CalendarClock,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,10 +16,9 @@ const items = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/accounts', label: 'Cuentas', icon: Wallet },
   { href: '/transactions', label: 'Transacciones', icon: ArrowLeftRight },
-  { href: '/calendar', label: 'Calendario', icon: CalendarDays },
-  { href: '/manual', label: 'Gastos manuales', icon: PenLine },
-  { href: '/connections', label: 'Conexiones', icon: Plug },
-  { href: '/investments', label: 'Inversiones', icon: TrendingUp },
+  { href: '/budgets', label: 'Presupuestos', icon: PiggyBank },
+  { href: '/scheduled', label: 'Pagos programados', icon: CalendarClock },
+  { href: '/reports', label: 'Informes', icon: BarChart3 },
 ];
 
 export function Sidebar() {
