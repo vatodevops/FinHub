@@ -30,6 +30,25 @@ Los backups se guardan en `deploy/backups/`.
 
 ## Flujo staging + promote
 
+### Opción recomendada: GitHub Actions sin intervención manual
+
+- rama `staging` -> despliegue automático a staging
+- tag `promote-*` -> despliegue automático a producción
+
+Secrets necesarios en GitHub Actions:
+- `FINHUB_VPS_HOST`
+- `FINHUB_VPS_PORT`
+- `FINHUB_VPS_USER`
+- `FINHUB_VPS_SSH_KEY`
+
+Ficheros necesarios en el VPS:
+- `deploy/.env` para producción
+- `deploy/.env.staging` para staging
+
+Scripts remotos usados por Actions:
+- `deploy/scripts/vps-deploy-staging.sh <git-ref>`
+- `deploy/scripts/vps-deploy-prod.sh <git-ref>`
+
 ### Staging local del repo
 - levantar staging: `./deploy/scripts/staging-up.sh`
 - comprobar staging: `./deploy/scripts/staging-check.sh`
@@ -58,3 +77,30 @@ Solo cuando staging esté validado:
 ```
 
 Hace backup, rebuild y levanta producción de nuevo antes de validar health.
+
+## Cómo trabajar con la variante B
+
+### Para tu colega
+
+1. Trabajar en su rama normal.
+2. Cuando quiera probar algo desplegado, fusionarlo o empujarlo a `staging`.
+3. GitHub Actions desplegará staging automáticamente.
+4. Si staging está bien, crear un tag de promote sobre el commit exacto:
+
+```bash
+git tag promote-YYYYMMDD-HHMM
+git push origin promote-YYYYMMDD-HHMM
+```
+
+Eso dispara producción automáticamente sin necesitar pasarle nada a Alejandro ni a Vato.
+
+### Convención recomendada
+
+- `staging` siempre es entorno de prueba desplegable
+- `main` sigue siendo rama principal de desarrollo estable
+- los tags `promote-*` son la decisión explícita de publicar
+
+## Notas de infraestructura
+
+- `deploy/docker-compose.staging.yml` usa backend `127.0.0.1:8083` y frontend `127.0.0.1:3011`
+- si quieres exponer staging públicamente, falta añadir su router en Traefik/Pangolin, por ejemplo con `staging-finhub.vatotech.es`

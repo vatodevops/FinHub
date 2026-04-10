@@ -1,0 +1,24 @@
+name: Deploy staging
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy staging on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.FINHUB_VPS_HOST }}
+          username: ${{ secrets.FINHUB_VPS_USER }}
+          port: ${{ secrets.FINHUB_VPS_PORT }}
+          key: ${{ secrets.FINHUB_VPS_SSH_KEY }}
+          script: |
+            cd /root/FinHub
+            bash deploy/scripts/vps-deploy-staging.sh "${{ github.sha }}"
+

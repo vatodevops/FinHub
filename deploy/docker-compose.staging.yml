@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: finhub-staging-postgres
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - finhub_staging_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - default
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: finhub-staging-backend
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    environment:
+      APP_NAME: FinHub API (staging)
+      ENVIRONMENT: staging
+      DATABASE_URL: ${DATABASE_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      GOCARDLESS_REDIRECT_URI: ${GOCARDLESS_REDIRECT_URI}
+    command: ["sh", "-lc", "alembic upgrade head && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port 8081"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8083:8081"
+    networks:
+      - default
+      - pangolin
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+    container_name: finhub-staging-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:3011:3001"
+    networks:
+      - default
+      - pangolin
+
+volumes:
+  finhub_staging_postgres_data:
+
+networks:
+  default:
+    name: deploy_staging_default
+  pangolin:
+    external: true
+    name: pangolin
+
