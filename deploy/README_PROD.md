@@ -23,3 +23,10 @@ La publicación pública está definida en:
 Routers:
 - `finhub-frontend-router`
 - `finhub-api-router`
+
+
+## Backup y restore
+- backup: `deploy/scripts/backup.sh`
+- restore: `deploy/scripts/restore.sh /ruta/al/backup.db [ruta/al/env.backup]`
+
+Los backups se guardan en `deploy/backups/`.
