@@ -6,15 +6,13 @@
 - Dominio: `https://finhub.vatotech.es`
 - Frontend publicado por Traefik/Pangolin
 - API publicada en `/api`
-- Runtime actual: `SQLite` en volumen Docker `finhub_data`
-
-## Motivo de SQLite temporal
-Las migraciones Alembic del repo fallan en PostgreSQL durante la inicialización de enums, así que el despliegue operativo actual usa SQLite para dejar el servicio arriba.
+- Runtime actual: `PostgreSQL 16`
 
 ## Compose actual
 - fichero: `deploy/docker-compose.prod.yml`
 - backend local: `127.0.0.1:8082`
 - frontend local: `127.0.0.1:3010`
+- postgres: servicio `finhub-postgres`
 
 ## Proxy
 La publicación pública está definida en:
@@ -24,9 +22,8 @@ Routers:
 - `finhub-frontend-router`
 - `finhub-api-router`
 
-
 ## Backup y restore
 - backup: `deploy/scripts/backup.sh`
-- restore: `deploy/scripts/restore.sh /ruta/al/backup.db [ruta/al/env.backup]`
+- restore: `deploy/scripts/restore.sh /ruta/al/backup.dump [ruta/al/env.backup]`
 
 Los backups se guardan en `deploy/backups/`.

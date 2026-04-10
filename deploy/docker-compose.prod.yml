@@ -1,4 +1,24 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: finhub-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - finhub_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - default
+
   backend:
     build:
       context: ..
@@ -10,12 +30,13 @@ services:
     environment:
       APP_NAME: FinHub API
       ENVIRONMENT: production
-      DATABASE_URL: sqlite:////data/finhub.db
+      DATABASE_URL: ${DATABASE_URL}
       CORS_ORIGINS: ${CORS_ORIGINS}
       GOCARDLESS_REDIRECT_URI: ${GOCARDLESS_REDIRECT_URI}
-    command: ["sh", "-lc", "mkdir -p /data && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port 8081"]
-    volumes:
-      - finhub_data:/data
+    command: ["sh", "-lc", "alembic upgrade head && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port 8081"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8082:8081"
     networks:
@@ -39,7 +60,7 @@ services:
       - pangolin
 
 volumes:
-  finhub_data:
+  finhub_postgres_data:
 
 networks:
   default:
