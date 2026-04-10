@@ -1,0 +1,49 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: finhub-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_NAME: FinHub API
+      ENVIRONMENT: production
+      DATABASE_URL: sqlite:////data/finhub.db
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      GOCARDLESS_REDIRECT_URI: ${GOCARDLESS_REDIRECT_URI}
+    command: ["sh", "-lc", "mkdir -p /data && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port 8081"]
+    volumes:
+      - finhub_data:/data
+    ports:
+      - "127.0.0.1:8082:8081"
+    networks:
+      - default
+      - pangolin
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+    container_name: finhub-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:3010:3001"
+    networks:
+      - default
+      - pangolin
+
+volumes:
+  finhub_data:
+
+networks:
+  default:
+    name: deploy_default
+  pangolin:
+    external: true
+    name: pangolin
