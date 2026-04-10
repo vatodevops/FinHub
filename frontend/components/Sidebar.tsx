@@ -9,8 +9,10 @@ import {
   PiggyBank,
   CalendarClock,
   BarChart3,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth';
 
 const items = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -23,9 +25,10 @@ const items = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   return (
-    <aside className="bg-linear-to-b from-sidebar to-[#0a1020] border-r border-sidebar-border p-5 sticky top-0 h-screen max-lg:static max-lg:h-auto">
+    <aside className="bg-linear-to-b from-sidebar to-[#0a1020] border-r border-sidebar-border p-5 sticky top-0 h-screen max-lg:static max-lg:h-auto flex flex-col">
       <div className="flex items-center gap-3 mb-6 px-2 py-1.5">
         <div className="w-10 h-10 grid place-items-center rounded-xl bg-linear-to-b from-[#7aaeff] to-[#4779ff] text-[#07111f] font-black">
           F
@@ -36,7 +39,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="grid gap-1.5">
+      <nav className="grid gap-1.5 flex-1">
         {items.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
@@ -57,6 +60,20 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      <div className="mt-6 border-t border-border pt-4">
+        <div className="px-3 py-2 rounded-xl bg-white/[0.03] border border-border">
+          <div className="text-sm font-medium text-foreground">{user?.full_name || 'Usuario'}</div>
+          <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+          <button
+            onClick={() => logout()}
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent/8 transition-colors text-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar sesion
+          </button>
+        </div>
+      </div>
     </aside>
   );
 }

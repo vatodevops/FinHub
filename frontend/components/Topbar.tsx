@@ -7,7 +7,7 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
         <h1 className="text-3xl font-bold tracking-tight m-0 mb-1.5">{title}</h1>
         {subtitle ? <p className="text-muted-foreground m-0">{subtitle}</p> : null}
       </div>
-      <Badge variant="outline">Localhost mode</Badge>
+      <Badge variant="outline">Protected mode</Badge>
     </div>
   );
 }

@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     gocardless_secret_id: str | None = None
     gocardless_secret_key: str | None = None
     gocardless_redirect_uri: str = "http://localhost:3001/connectors/gocardless/callback"
+    auth_session_cookie: str = "finhub_session"
+    auth_session_days: int = 30
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
