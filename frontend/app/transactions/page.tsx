@@ -29,7 +29,7 @@ export default function TransactionsPage() {
 
   return (
     <div className="max-w-[1440px] mx-auto">
-      <Topbar title="Transacciones" subtitle="Gestiona todos tus movimientos, filtra, categoriza y añade nuevos." />
+      <Topbar title="Transacciones" subtitle="Gestiona todos tus movimientos, filtra, categoriza y añade nuevos, sin enseñar duplicados Curve." />
       <TransactionsExplorer
         transactions={transactions}
         categories={categories}

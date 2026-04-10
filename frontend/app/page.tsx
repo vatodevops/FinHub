@@ -7,6 +7,7 @@ import { MetricCard } from '@/components/MetricCard';
 import { PageSection } from '@/components/PageSection';
 import { Topbar } from '@/components/Topbar';
 import { api, type Overview, type Transaction, type RecurringOccurrence, type Budget } from '@/lib/api';
+import { filterVisibleTransactions } from '@/lib/curve';
 import { cn } from '@/lib/utils';
 
 function money(value: string | number) {
@@ -29,7 +30,7 @@ export default function HomePage() {
       api.budgets(now.getMonth() + 1, now.getFullYear()),
     ]).then(([o, t, c, b]) => {
       setOverview(o);
-      setTransactions(t);
+      setTransactions(filterVisibleTransactions(t));
       setCalendar(c);
       setBudgets(b);
     });

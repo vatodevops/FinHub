@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, type Account, type Category, type CurveDuplicateCandidate, type Transaction } from '@/lib/api';
+import { filterVisibleTransactions } from '@/lib/curve';
 import { cn } from '@/lib/utils';
 import { AddTransactionDialog } from './AddTransactionDialog';
 import { TransferDialog } from './TransferDialog';
@@ -35,15 +36,16 @@ export function TransactionsExplorer({
   const [query, setQuery] = useState('');
   const [channel, setChannel] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [curveOnly, setCurveOnly] = useState(false);
-  const [rows, setRows] = useState(transactions);
+  const [sourceType, setSourceType] = useState('all');
+  const [rows, setRows] = useState(filterVisibleTransactions(transactions));
   const [busyTxId, setBusyTxId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
 
-  // Sync rows when transactions prop changes
-  useMemo(() => setRows(transactions), [transactions]);
+  useEffect(() => {
+    setRows(filterVisibleTransactions(transactions));
+  }, [transactions]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -53,15 +55,12 @@ export function TransactionsExplorer({
         if (categoryFilter === 'none' && tx.category_id) return false;
         if (categoryFilter !== 'none' && tx.category_id !== categoryFilter) return false;
       }
-      if (curveOnly) {
-        const text = `${tx.description_raw || ''} ${tx.merchant_raw || ''}`.toUpperCase();
-        if (tx.source_type !== 'bank' || (!text.includes('CRV-') && !text.includes('CURVE'))) return false;
-      }
+      if (sourceType !== 'all' && tx.source_type !== sourceType) return false;
       if (!q) return true;
       const blob = `${tx.merchant_clean || ''} ${tx.merchant_raw || ''} ${tx.description_raw || ''} ${tx.category_name || ''}`.toLowerCase();
       return blob.includes(q);
     });
-  }, [rows, query, channel, categoryFilter, curveOnly]);
+  }, [rows, query, channel, categoryFilter, sourceType]);
 
   async function assignCategory(transactionId: string, categoryId: string) {
     setBusyTxId(transactionId);
@@ -93,7 +92,7 @@ export function TransactionsExplorer({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto_auto] gap-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-2.5">
             <Input placeholder="Buscar por merchant, descripcion o categoria" value={query} onChange={(e) => setQuery(e.target.value)} />
             <select className="flex h-9 w-full rounded-md border border-border bg-input px-3 py-1 text-sm text-foreground" value={channel} onChange={(e) => setChannel(e.target.value)}>
               <option value="all">Todos los canales</option>
@@ -109,9 +108,11 @@ export function TransactionsExplorer({
               <option value="none">Sin categoria</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <Button variant={curveOnly ? 'default' : 'secondary'} onClick={() => setCurveOnly((v) => !v)}>
-              {curveOnly ? 'Curve: ON' : 'Curve'}
-            </Button>
+            <select className="flex h-9 w-full rounded-md border border-border bg-input px-3 py-1 text-sm text-foreground" value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
+              <option value="all">Todos los origenes</option>
+              <option value="bank">Banco</option>
+              <option value="curve">Curve</option>
+            </select>
             <Badge variant="outline" className="self-center">{filtered.length} filas</Badge>
           </div>
         </CardContent>
@@ -127,6 +128,7 @@ export function TransactionsExplorer({
                 <TableHead>Fecha</TableHead>
                 <TableHead>Concepto</TableHead>
                 <TableHead>Canal</TableHead>
+                <TableHead>Origen</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead className="text-right">Importe</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -138,6 +140,7 @@ export function TransactionsExplorer({
                   <TableCell className="whitespace-nowrap">{tx.booked_at ? tx.booked_at.slice(0, 10) : '\u2014'}</TableCell>
                   <TableCell>{tx.merchant_clean || tx.merchant_raw || tx.description_raw || '\u2014'}</TableCell>
                   <TableCell><Badge variant="outline">{tx.channel}</Badge></TableCell>
+                  <TableCell><Badge variant="outline">{tx.source_type}</Badge></TableCell>
                   <TableCell>
                     <select
                       className="flex h-8 w-full min-w-[120px] rounded-md border border-border bg-input px-2 py-1 text-sm text-foreground"

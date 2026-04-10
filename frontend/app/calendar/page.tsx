@@ -37,11 +37,25 @@ export default async function CalendarPage() {
     })),
   ];
 
+  const months = Array.from({ length: 3 }, (_, idx) => {
+    const d = new Date(now.getFullYear(), now.getMonth() + idx, 1);
+    return { year: d.getFullYear(), monthIndex: d.getMonth() };
+  });
+
   return (
     <div className="max-w-[1440px] mx-auto">
-      <Topbar title="Calendario" subtitle="Vista mensual real con lo que deberia cobrarse o pagarse en cada dia." />
+      <Topbar title="Calendario" subtitle="Vista mensual real de varios meses con lo que debería cobrarse o pagarse en cada día." />
       <div className="grid gap-4">
-        <MonthlyCalendar items={calendarItems} year={now.getFullYear()} monthIndex={now.getMonth()} />
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          {months.map((month) => (
+            <MonthlyCalendar
+              key={`${month.year}-${month.monthIndex}`}
+              items={calendarItems}
+              year={month.year}
+              monthIndex={month.monthIndex}
+            />
+          ))}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <PageSection title="Series recurrentes" subtitle="Patrones aprendidos o confirmados por el sistema.">
