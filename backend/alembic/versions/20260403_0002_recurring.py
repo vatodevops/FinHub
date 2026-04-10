@@ -14,13 +14,13 @@ down_revision = "20260403_0001"
 branch_labels = None
 depends_on = None
 
-recurrence_type = sa.Enum(
-    "weekly", "monthly", "bimonthly", "quarterly", "yearly", "irregular", name="recurrence_type"
+recurrence_type = postgresql.ENUM(
+    "weekly", "monthly", "bimonthly", "quarterly", "yearly", "irregular", name="recurrence_type", create_type=False
 )
-recurrence_state = sa.Enum(
-    "auto_detected", "manual_confirmed", "manual_ignored", "inactive", name="recurrence_state"
+recurrence_state = postgresql.ENUM(
+    "auto_detected", "manual_confirmed", "manual_ignored", "inactive", name="recurrence_state", create_type=False
 )
-occurrence_status = sa.Enum("expected", "due", "paid", "missed", "skipped", name="occurrence_status")
+occurrence_status = postgresql.ENUM("expected", "due", "paid", "missed", "skipped", name="occurrence_status", create_type=False)
 
 
 def upgrade() -> None:

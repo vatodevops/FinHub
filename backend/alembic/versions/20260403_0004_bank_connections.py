@@ -14,7 +14,7 @@ down_revision = "20260403_0003"
 branch_labels = None
 depends_on = None
 
-bank_connection_status = sa.Enum("pending", "linked", "expired", "failed", name="bank_connection_status")
+bank_connection_status = postgresql.ENUM("pending", "linked", "expired", "failed", name="bank_connection_status", create_type=False)
 
 
 def upgrade() -> None:

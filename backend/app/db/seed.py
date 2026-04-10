@@ -47,7 +47,8 @@ DEFAULT_CATEGORIES = [
 
 
 def seed() -> None:
-    Base.metadata.create_all(bind=engine)
+    if str(engine.url).startswith("sqlite"):
+        Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         if db.query(Category).count() < len(DEFAULT_CATEGORIES):

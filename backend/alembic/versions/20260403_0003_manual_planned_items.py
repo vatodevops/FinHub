@@ -14,8 +14,8 @@ down_revision = "20260403_0002"
 branch_labels = None
 depends_on = None
 
-manual_item_kind = sa.Enum("one_off", "recurring", name="manual_item_kind")
-manual_item_status = sa.Enum("planned", "paid", "skipped", "cancelled", name="manual_item_status")
+manual_item_kind = postgresql.ENUM("one_off", "recurring", name="manual_item_kind", create_type=False)
+manual_item_status = postgresql.ENUM("planned", "paid", "skipped", "cancelled", name="manual_item_status", create_type=False)
 
 
 def upgrade() -> None:

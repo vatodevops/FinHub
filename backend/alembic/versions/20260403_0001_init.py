@@ -15,14 +15,14 @@ branch_labels = None
 depends_on = None
 
 
-source_type = sa.Enum("bank", "curve", "broker", name="source_type", create_type=False)
-transaction_source_type = sa.Enum("bank", "curve", "broker", name="transaction_source_type", create_type=False)
-account_kind = sa.Enum("checking", "savings", "credit_card", "investment", "cash", name="account_kind", create_type=False)
-transaction_channel = sa.Enum(
+source_type = postgresql.ENUM("bank", "curve", "broker", name="source_type", create_type=False)
+transaction_source_type = postgresql.ENUM("bank", "curve", "broker", name="transaction_source_type", create_type=False)
+account_kind = postgresql.ENUM("checking", "savings", "credit_card", "investment", "cash", name="account_kind", create_type=False)
+transaction_channel = postgresql.ENUM(
     "card", "transfer", "direct_debit", "cash", "fee", "income", "other", name="transaction_channel", create_type=False
 )
-transaction_status = sa.Enum("booked", "pending", "shadow", "duplicate", name="transaction_status", create_type=False)
-link_type = sa.Enum("curve_settlement", "duplicate", "transfer_pair", name="link_type", create_type=False)
+transaction_status = postgresql.ENUM("booked", "pending", "shadow", "duplicate", name="transaction_status", create_type=False)
+link_type = postgresql.ENUM("curve_settlement", "duplicate", "transfer_pair", name="link_type", create_type=False)
 
 
 def upgrade() -> None:
