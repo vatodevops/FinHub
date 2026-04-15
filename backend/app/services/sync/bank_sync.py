@@ -10,6 +10,7 @@ from app.services.connectors.banks.gocardless import GoCardlessBankConnector
 
 
 async def sync_bank_connection(db: Session, connection: BankConnection) -> dict:
+    user_id = connection.user_id
     connector = GoCardlessBankConnector()
     requisition = await connector.client.get_requisition(connection.requisition_id)
     connection.link = requisition.get("link")
@@ -22,12 +23,14 @@ async def sync_bank_connection(db: Session, connection: BankConnection) -> dict:
     for normalized_account in accounts:
         account = (
             db.query(Account)
+            .filter(Account.user_id == user_id)
             .filter(Account.institution_id == institution.id)
             .filter(Account.external_id == normalized_account.external_id)
             .one_or_none()
         )
         if account is None:
             account = Account(
+                user_id=user_id,
                 institution_id=institution.id,
                 name=normalized_account.name,
                 iban_masked=normalized_account.iban_masked,
@@ -48,12 +51,14 @@ async def sync_bank_connection(db: Session, connection: BankConnection) -> dict:
         for tx in txs:
             row = (
                 db.query(Transaction)
+                .filter(Transaction.user_id == user_id)
                 .filter(Transaction.source_type == SourceType.bank)
                 .filter(Transaction.source_id == tx.source_id)
                 .one_or_none()
             )
             if row is None:
                 row = Transaction(
+                    user_id=user_id,
                     account_id=account.id,
                     source_type=SourceType.bank,
                     source_id=tx.source_id,
@@ -95,19 +100,26 @@ async def sync_bank_connection(db: Session, connection: BankConnection) -> dict:
 
 
 def _ensure_institution(db: Session, connection: BankConnection, requisition: dict) -> Institution:
+    user_id = connection.user_id
     institution = None
     if connection.institution_id:
-        institution = db.query(Institution).filter(Institution.id == connection.institution_id).one_or_none()
+        institution = (
+            db.query(Institution)
+            .filter(Institution.id == connection.institution_id, Institution.user_id == user_id)
+            .one_or_none()
+        )
     if institution is None:
         external_id = connection.institution_external_id or requisition.get("institution_id")
         institution = (
             db.query(Institution)
+            .filter(Institution.user_id == user_id)
             .filter(Institution.provider == connection.provider)
             .filter(Institution.external_id == external_id)
             .one_or_none()
         )
     if institution is None:
         institution = Institution(
+            user_id=user_id,
             name=connection.institution_name or requisition.get("institution_id") or "Bank",
             provider=connection.provider,
             external_id=connection.institution_external_id or requisition.get("institution_id"),

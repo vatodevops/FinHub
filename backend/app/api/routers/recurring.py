@@ -3,8 +3,10 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.api.deps.auth import require_auth
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
+from app.models.auth import User
 from app.models.entities import Transaction
 from app.models.recurring import RecurrenceState, RecurrenceType, RecurringOccurrence, RecurringSeries
 from app.schemas.recurring import (
@@ -19,18 +21,31 @@ router = APIRouter()
 
 
 @router.get("/recurring/series", response_model=list[RecurringSeriesResponse])
-def list_recurring_series(db: Session = Depends(get_db)) -> list[RecurringSeriesResponse]:
-    return db.query(RecurringSeries).order_by(RecurringSeries.next_expected_date.asc().nullslast()).all()
+def list_recurring_series(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+) -> list[RecurringSeriesResponse]:
+    return (
+        db.query(RecurringSeries)
+        .filter(RecurringSeries.user_id == user.id)
+        .order_by(RecurringSeries.next_expected_date.asc().nullslast())
+        .all()
+    )
 
 
 @router.post("/recurring/series", response_model=RecurringSeriesResponse, status_code=201)
-def create_recurring_series(payload: CreateRecurringSeriesRequest, db: Session = Depends(get_db)):
+def create_recurring_series(
+    payload: CreateRecurringSeriesRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+):
     try:
         rec_type = RecurrenceType(payload.recurrence_type)
     except ValueError:
         rec_type = RecurrenceType.monthly
 
     series = RecurringSeries(
+        user_id=user.id,
         account_id=payload.account_id,
         name=payload.name,
         merchant_clean=payload.merchant_clean,
@@ -52,8 +67,13 @@ def update_recurring_series(
     series_id: uuid.UUID,
     payload: UpdateRecurringSeriesRequest,
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ):
-    series = db.query(RecurringSeries).filter(RecurringSeries.id == series_id).one_or_none()
+    series = (
+        db.query(RecurringSeries)
+        .filter(RecurringSeries.id == series_id, RecurringSeries.user_id == user.id)
+        .one_or_none()
+    )
     if not series:
         raise NotFoundError("series_not_found")
 
@@ -84,11 +104,22 @@ def update_recurring_series(
 
 
 @router.delete("/recurring/series/{series_id}", status_code=204)
-def delete_recurring_series(series_id: uuid.UUID, db: Session = Depends(get_db)):
-    series = db.query(RecurringSeries).filter(RecurringSeries.id == series_id).one_or_none()
+def delete_recurring_series(
+    series_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    series = (
+        db.query(RecurringSeries)
+        .filter(RecurringSeries.id == series_id, RecurringSeries.user_id == user.id)
+        .one_or_none()
+    )
     if not series:
         raise NotFoundError("series_not_found")
-    db.query(RecurringOccurrence).filter(RecurringOccurrence.series_id == series_id).delete()
+    db.query(RecurringOccurrence).filter(
+        RecurringOccurrence.series_id == series_id,
+        RecurringOccurrence.user_id == user.id,
+    ).delete()
     db.delete(series)
     db.commit()
 
@@ -97,9 +128,11 @@ def delete_recurring_series(series_id: uuid.UUID, db: Session = Depends(get_db))
 def recurring_calendar(
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ) -> list[RecurringOccurrenceResponse]:
     return (
         db.query(RecurringOccurrence)
+        .filter(RecurringOccurrence.user_id == user.id)
         .order_by(RecurringOccurrence.expected_date.asc(), RecurringOccurrence.created_at.desc())
         .limit(limit)
         .all()
@@ -110,8 +143,9 @@ def recurring_calendar(
 def recurring_suggestions(
     account_id: uuid.UUID | None = Query(default=None),
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ):
-    query = db.query(Transaction)
+    query = db.query(Transaction).filter(Transaction.user_id == user.id)
     if account_id:
         query = query.filter(Transaction.account_id == account_id)
     txs = query.all()

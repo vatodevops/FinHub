@@ -36,6 +36,7 @@ class OccurrenceStatus(str, enum.Enum):
 class RecurringSeries(UUIDTimestampMixin, Base):
     __tablename__ = "recurring_series"
 
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     account_id: Mapped[str | None] = mapped_column(ForeignKey("accounts.id"))
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     merchant_clean: Mapped[str | None] = mapped_column(String(255))
@@ -57,6 +58,7 @@ class RecurringSeries(UUIDTimestampMixin, Base):
 class RecurringOccurrence(UUIDTimestampMixin, Base):
     __tablename__ = "recurring_occurrences"
 
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     series_id: Mapped[str] = mapped_column(ForeignKey("recurring_series.id"), nullable=False)
     expected_date: Mapped[date] = mapped_column(Date, nullable=False)
     expected_amount: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))

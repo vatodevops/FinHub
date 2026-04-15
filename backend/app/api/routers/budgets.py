@@ -6,8 +6,10 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.api.deps.auth import require_auth
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
+from app.models.auth import User
 from app.models.budget import Budget, BudgetPeriod
 from app.models.categories import Category
 from app.models.entities import Transaction, TransactionStatus
@@ -24,6 +26,7 @@ def _budget_to_response(budget: Budget, db: Session) -> dict:
         end = datetime(budget.year, budget.month + 1, 1, tzinfo=timezone.utc)
 
     spent = db.query(func.coalesce(func.sum(func.abs(Transaction.amount)), 0)).filter(
+        Transaction.user_id == budget.user_id,
         Transaction.category_id == budget.category_id,
         Transaction.amount < 0,
         Transaction.status.in_([TransactionStatus.booked, TransactionStatus.pending]),
@@ -31,7 +34,11 @@ def _budget_to_response(budget: Budget, db: Session) -> dict:
         Transaction.booked_at < end,
     ).scalar()
 
-    cat = db.query(Category).filter(Category.id == budget.category_id).first()
+    cat = (
+        db.query(Category)
+        .filter(Category.id == budget.category_id, Category.user_id == budget.user_id)
+        .first()
+    )
     return {
         "id": budget.id,
         "category_id": budget.category_id,
@@ -50,6 +57,7 @@ def list_budgets(
     month: int = Query(default=None, ge=1, le=12),
     year: int = Query(default=None, ge=2020, le=2100),
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ) -> list[BudgetResponse]:
     from datetime import date
 
@@ -58,13 +66,25 @@ def list_budgets(
     if year is None:
         year = date.today().year
 
-    budgets = db.query(Budget).filter(Budget.month == month, Budget.year == year).all()
+    budgets = (
+        db.query(Budget)
+        .filter(Budget.user_id == user.id, Budget.month == month, Budget.year == year)
+        .all()
+    )
     return [_budget_to_response(b, db) for b in budgets]
 
 
 @router.post("/budgets", response_model=BudgetResponse, status_code=201)
-def create_budget(payload: CreateBudgetRequest, db: Session = Depends(get_db)) -> BudgetResponse:
-    cat = db.query(Category).filter(Category.id == payload.category_id).first()
+def create_budget(
+    payload: CreateBudgetRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+) -> BudgetResponse:
+    cat = (
+        db.query(Category)
+        .filter(Category.id == payload.category_id, Category.user_id == user.id)
+        .first()
+    )
     if not cat:
         raise NotFoundError("category_not_found")
 
@@ -74,6 +94,7 @@ def create_budget(payload: CreateBudgetRequest, db: Session = Depends(get_db)) -
         period = BudgetPeriod.monthly
 
     budget = Budget(
+        user_id=user.id,
         category_id=payload.category_id,
         amount_limit=payload.amount_limit,
         period=period,
@@ -91,8 +112,13 @@ def update_budget(
     budget_id: uuid.UUID,
     payload: UpdateBudgetRequest,
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ) -> BudgetResponse:
-    budget = db.query(Budget).filter(Budget.id == budget_id).one_or_none()
+    budget = (
+        db.query(Budget)
+        .filter(Budget.id == budget_id, Budget.user_id == user.id)
+        .one_or_none()
+    )
     if not budget:
         raise NotFoundError("budget_not_found")
     if payload.amount_limit is not None:
@@ -108,8 +134,16 @@ def update_budget(
 
 
 @router.delete("/budgets/{budget_id}", status_code=204)
-def delete_budget(budget_id: uuid.UUID, db: Session = Depends(get_db)):
-    budget = db.query(Budget).filter(Budget.id == budget_id).one_or_none()
+def delete_budget(
+    budget_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    budget = (
+        db.query(Budget)
+        .filter(Budget.id == budget_id, Budget.user_id == user.id)
+        .one_or_none()
+    )
     if not budget:
         raise NotFoundError("budget_not_found")
     db.delete(budget)

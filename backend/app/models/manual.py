@@ -24,6 +24,7 @@ class ManualItemStatus(str, enum.Enum):
 class ManualPlannedItem(UUIDTimestampMixin, Base):
     __tablename__ = "manual_planned_items"
 
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     account_id: Mapped[str | None] = mapped_column(ForeignKey("accounts.id"))
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     merchant_hint: Mapped[str | None] = mapped_column(String(255))

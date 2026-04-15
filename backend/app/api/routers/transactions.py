@@ -4,8 +4,10 @@ from datetime import date, datetime, timezone
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.api.deps.auth import require_auth
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
+from app.models.auth import User
 from app.models.entities import (
     Account,
     LinkType,
@@ -43,8 +45,9 @@ def list_transactions(
     search: str | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ) -> list[TransactionResponse]:
-    query = db.query(Transaction)
+    query = db.query(Transaction).filter(Transaction.user_id == user.id)
     if account_id:
         query = query.filter(Transaction.account_id == account_id)
     if category_id:
@@ -72,8 +75,13 @@ def list_transactions(
 def create_transaction(
     payload: CreateTransactionRequest,
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ) -> TransactionResponse:
-    account = db.query(Account).filter(Account.id == payload.account_id).one_or_none()
+    account = (
+        db.query(Account)
+        .filter(Account.id == payload.account_id, Account.user_id == user.id)
+        .one_or_none()
+    )
     if not account:
         raise NotFoundError("account_not_found")
 
@@ -84,7 +92,17 @@ def create_transaction(
 
     booked = datetime(payload.booked_at.year, payload.booked_at.month, payload.booked_at.day, tzinfo=timezone.utc) if payload.booked_at else datetime.now(timezone.utc)
 
+    if payload.category_id:
+        category = (
+            db.query(Category)
+            .filter(Category.id == payload.category_id, Category.user_id == user.id)
+            .one_or_none()
+        )
+        if not category:
+            raise NotFoundError("category_not_found")
+
     tx = Transaction(
+        user_id=user.id,
         account_id=payload.account_id,
         category_id=payload.category_id,
         source_type=SourceType.bank,
@@ -109,8 +127,13 @@ def update_transaction(
     transaction_id: uuid.UUID,
     payload: UpdateTransactionRequest,
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ) -> TransactionResponse:
-    tx = db.query(Transaction).filter(Transaction.id == transaction_id).one_or_none()
+    tx = (
+        db.query(Transaction)
+        .filter(Transaction.id == transaction_id, Transaction.user_id == user.id)
+        .one_or_none()
+    )
     if not tx:
         raise NotFoundError("transaction_not_found")
 
@@ -123,6 +146,13 @@ def update_transaction(
     if payload.booked_at is not None:
         tx.booked_at = datetime(payload.booked_at.year, payload.booked_at.month, payload.booked_at.day, tzinfo=timezone.utc)
     if payload.category_id is not None:
+        category = (
+            db.query(Category)
+            .filter(Category.id == payload.category_id, Category.user_id == user.id)
+            .one_or_none()
+        )
+        if not category:
+            raise NotFoundError("category_not_found")
         tx.category_id = payload.category_id
     if payload.channel is not None:
         try:
@@ -136,13 +166,22 @@ def update_transaction(
 
 
 @router.delete("/transactions/{transaction_id}", status_code=204)
-def delete_transaction(transaction_id: uuid.UUID, db: Session = Depends(get_db)):
-    tx = db.query(Transaction).filter(Transaction.id == transaction_id).one_or_none()
+def delete_transaction(
+    transaction_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    tx = (
+        db.query(Transaction)
+        .filter(Transaction.id == transaction_id, Transaction.user_id == user.id)
+        .one_or_none()
+    )
     if not tx:
         raise NotFoundError("transaction_not_found")
     db.query(TransactionLink).filter(
+        TransactionLink.user_id == user.id,
         (TransactionLink.left_transaction_id == transaction_id)
-        | (TransactionLink.right_transaction_id == transaction_id)
+        | (TransactionLink.right_transaction_id == transaction_id),
     ).delete(synchronize_session=False)
     db.delete(tx)
     db.commit()
@@ -153,10 +192,23 @@ def update_transaction_category(
     transaction_id: uuid.UUID,
     payload: TransactionCategoryUpdate,
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ) -> TransactionResponse:
-    tx = db.query(Transaction).filter(Transaction.id == transaction_id).one_or_none()
+    tx = (
+        db.query(Transaction)
+        .filter(Transaction.id == transaction_id, Transaction.user_id == user.id)
+        .one_or_none()
+    )
     if tx is None:
         raise NotFoundError("transaction_not_found")
+    if payload.category_id is not None:
+        category = (
+            db.query(Category)
+            .filter(Category.id == payload.category_id, Category.user_id == user.id)
+            .one_or_none()
+        )
+        if not category:
+            raise NotFoundError("category_not_found")
     tx.category_id = payload.category_id
     db.commit()
     db.refresh(tx)
@@ -167,9 +219,18 @@ def update_transaction_category(
 def create_transfer(
     payload: TransferRequest,
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ) -> list[TransactionResponse]:
-    from_acc = db.query(Account).filter(Account.id == payload.from_account_id).one_or_none()
-    to_acc = db.query(Account).filter(Account.id == payload.to_account_id).one_or_none()
+    from_acc = (
+        db.query(Account)
+        .filter(Account.id == payload.from_account_id, Account.user_id == user.id)
+        .one_or_none()
+    )
+    to_acc = (
+        db.query(Account)
+        .filter(Account.id == payload.to_account_id, Account.user_id == user.id)
+        .one_or_none()
+    )
     if not from_acc or not to_acc:
         raise NotFoundError("account_not_found")
 
@@ -177,6 +238,7 @@ def create_transfer(
     link_id = str(uuid.uuid4())
 
     tx_out = Transaction(
+        user_id=user.id,
         account_id=payload.from_account_id,
         source_type=SourceType.bank,
         source_id=f"transfer-out-{link_id}",
@@ -189,6 +251,7 @@ def create_transfer(
         status=TransactionStatus.booked,
     )
     tx_in = Transaction(
+        user_id=user.id,
         account_id=payload.to_account_id,
         source_type=SourceType.bank,
         source_id=f"transfer-in-{link_id}",
@@ -204,6 +267,7 @@ def create_transfer(
     db.flush()
 
     link = TransactionLink(
+        user_id=user.id,
         left_transaction_id=tx_out.id,
         right_transaction_id=tx_in.id,
         link_type=LinkType.transfer_pair,
@@ -221,19 +285,36 @@ def create_transfer(
 # ── Categories ───────────────────────────────────────────────
 
 @router.get("/categories", response_model=list[CategoryResponse])
-def list_categories(db: Session = Depends(get_db)):
-    return db.query(Category).order_by(Category.name.asc()).all()
+def list_categories(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    return (
+        db.query(Category)
+        .filter(Category.user_id == user.id)
+        .order_by(Category.name.asc())
+        .all()
+    )
 
 
 @router.post("/categories", response_model=CategoryResponse, status_code=201)
-def create_category(payload: CreateCategoryRequest, db: Session = Depends(get_db)):
+def create_category(
+    payload: CreateCategoryRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+):
     import re
     slug = re.sub(r"[^a-z0-9]+", "-", payload.name.lower()).strip("-")
-    existing = db.query(Category).filter(Category.slug == slug).first()
+    existing = (
+        db.query(Category)
+        .filter(Category.user_id == user.id, Category.slug == slug)
+        .first()
+    )
     if existing:
         slug = f"{slug}-{uuid.uuid4().hex[:6]}"
 
     cat = Category(
+        user_id=user.id,
         name=payload.name,
         slug=slug,
         color=payload.color,
@@ -247,8 +328,17 @@ def create_category(payload: CreateCategoryRequest, db: Session = Depends(get_db
 
 
 @router.patch("/categories/{category_id}", response_model=CategoryResponse)
-def update_category(category_id: uuid.UUID, payload: UpdateCategoryRequest, db: Session = Depends(get_db)):
-    cat = db.query(Category).filter(Category.id == category_id).one_or_none()
+def update_category(
+    category_id: uuid.UUID,
+    payload: UpdateCategoryRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    cat = (
+        db.query(Category)
+        .filter(Category.id == category_id, Category.user_id == user.id)
+        .one_or_none()
+    )
     if not cat:
         raise NotFoundError("category_not_found")
     if payload.name is not None:
@@ -265,15 +355,29 @@ def update_category(category_id: uuid.UUID, payload: UpdateCategoryRequest, db: 
 
 
 @router.delete("/categories/{category_id}", status_code=204)
-def delete_category(category_id: uuid.UUID, db: Session = Depends(get_db)):
-    cat = db.query(Category).filter(Category.id == category_id).one_or_none()
+def delete_category(
+    category_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    cat = (
+        db.query(Category)
+        .filter(Category.id == category_id, Category.user_id == user.id)
+        .one_or_none()
+    )
     if not cat:
         raise NotFoundError("category_not_found")
-    db.query(Transaction).filter(Transaction.category_id == category_id).update({"category_id": None})
+    db.query(Transaction).filter(
+        Transaction.user_id == user.id,
+        Transaction.category_id == category_id,
+    ).update({"category_id": None})
     db.delete(cat)
     db.commit()
 
 
 @router.get("/transactions/curve-duplicates", response_model=list[CurveDuplicateCandidateResponse])
-def curve_duplicates(db: Session = Depends(get_db)) -> list[CurveDuplicateCandidateResponse]:
-    return list_curve_duplicate_candidates(db)
+def curve_duplicates(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+) -> list[CurveDuplicateCandidateResponse]:
+    return list_curve_duplicate_candidates(db, user.id)

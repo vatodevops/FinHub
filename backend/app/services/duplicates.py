@@ -6,9 +6,17 @@ from app.schemas.transactions import TransactionResponse, tx_payload
 from app.services.reconciliation import match_curve_to_bank
 
 
-def list_curve_duplicate_candidates(db: Session) -> list[CurveDuplicateCandidateResponse]:
-    curve_txs = db.query(Transaction).filter(Transaction.source_type == SourceType.curve).all()
-    bank_txs = db.query(Transaction).filter(Transaction.source_type == SourceType.bank).all()
+def list_curve_duplicate_candidates(db: Session, user_id) -> list[CurveDuplicateCandidateResponse]:
+    curve_txs = (
+        db.query(Transaction)
+        .filter(Transaction.user_id == user_id, Transaction.source_type == SourceType.curve)
+        .all()
+    )
+    bank_txs = (
+        db.query(Transaction)
+        .filter(Transaction.user_id == user_id, Transaction.source_type == SourceType.bank)
+        .all()
+    )
     out: list[CurveDuplicateCandidateResponse] = []
 
     for curve_tx in curve_txs:

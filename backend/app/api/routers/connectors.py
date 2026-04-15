@@ -4,8 +4,10 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.api.deps.auth import require_auth
 from app.core.exceptions import ExternalServiceError, NotFoundError
 from app.db.session import get_db
+from app.models.auth import User
 from app.models.bank_connection import BankConnection, BankConnectionStatus
 from app.schemas.bank_connection import BankConnectionResponse
 from app.services.connectors.banks.gocardless import GoCardlessBankConnector
@@ -18,7 +20,10 @@ router = APIRouter()
 
 
 @router.get("/connectors/gocardless/institutions")
-async def gocardless_institutions(country: str = Query(default="ES")):
+async def gocardless_institutions(
+    country: str = Query(default="ES"),
+    user: User = Depends(require_auth),
+):
     try:
         client = GoCardlessClient()
         return await client.list_institutions(country=country)
@@ -27,8 +32,16 @@ async def gocardless_institutions(country: str = Query(default="ES")):
 
 
 @router.get("/bank-connections", response_model=list[BankConnectionResponse])
-def list_bank_connections(db: Session = Depends(get_db)) -> list[BankConnectionResponse]:
-    return db.query(BankConnection).order_by(BankConnection.created_at.desc()).all()
+def list_bank_connections(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+) -> list[BankConnectionResponse]:
+    return (
+        db.query(BankConnection)
+        .filter(BankConnection.user_id == user.id)
+        .order_by(BankConnection.created_at.desc())
+        .all()
+    )
 
 
 @router.post("/connectors/gocardless/requisition", response_model=BankConnectionResponse)
@@ -37,10 +50,12 @@ async def gocardless_requisition(
     reference: str = Query(...),
     institution_name: str | None = Query(default=None),
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ):
     connector = GoCardlessBankConnector()
     requisition = await connector.client.create_requisition(institution_id=institution_id, reference=reference)
     connection = BankConnection(
+        user_id=user.id,
         provider="gocardless_bad",
         requisition_id=requisition["id"],
         reference=reference,
@@ -56,8 +71,16 @@ async def gocardless_requisition(
 
 
 @router.post("/bank-connections/{connection_id}/refresh", response_model=BankConnectionResponse)
-async def refresh_bank_connection(connection_id: uuid.UUID, db: Session = Depends(get_db)) -> BankConnectionResponse:
-    connection = db.query(BankConnection).filter(BankConnection.id == connection_id).one_or_none()
+async def refresh_bank_connection(
+    connection_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+) -> BankConnectionResponse:
+    connection = (
+        db.query(BankConnection)
+        .filter(BankConnection.id == connection_id, BankConnection.user_id == user.id)
+        .one_or_none()
+    )
     if connection is None:
         raise NotFoundError("connection_not_found")
     try:
@@ -80,8 +103,16 @@ async def refresh_bank_connection(connection_id: uuid.UUID, db: Session = Depend
 
 
 @router.post("/bank-connections/{connection_id}/sync")
-async def run_bank_connection_sync(connection_id: uuid.UUID, db: Session = Depends(get_db)):
-    connection = db.query(BankConnection).filter(BankConnection.id == connection_id).one_or_none()
+async def run_bank_connection_sync(
+    connection_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    connection = (
+        db.query(BankConnection)
+        .filter(BankConnection.id == connection_id, BankConnection.user_id == user.id)
+        .one_or_none()
+    )
     if connection is None:
         raise NotFoundError("connection_not_found")
     try:

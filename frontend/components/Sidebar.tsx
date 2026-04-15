@@ -10,6 +10,7 @@ import {
   CalendarClock,
   BarChart3,
   LogOut,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
@@ -21,6 +22,7 @@ const items = [
   { href: '/budgets', label: 'Presupuestos', icon: PiggyBank },
   { href: '/scheduled', label: 'Pagos programados', icon: CalendarClock },
   { href: '/reports', label: 'Informes', icon: BarChart3 },
+  { href: '/settings/sessions', label: 'Sesiones', icon: ShieldCheck },
 ];
 
 export function Sidebar() {
@@ -63,8 +65,25 @@ export function Sidebar() {
 
       <div className="mt-6 border-t border-border pt-4">
         <div className="px-3 py-2 rounded-xl bg-white/[0.03] border border-border">
-          <div className="text-sm font-medium text-foreground">{user?.full_name || 'Usuario'}</div>
-          <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+          <div className="flex items-center gap-3">
+            {user?.picture_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.picture_url}
+                alt={user.full_name || user.email}
+                className="w-9 h-9 rounded-full object-cover border border-border"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center text-sm font-medium text-foreground">
+                {(user?.full_name || user?.email || '?').slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-foreground truncate">{user?.full_name || 'Usuario'}</div>
+              <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+            </div>
+          </div>
           <button
             onClick={() => logout()}
             className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent/8 transition-colors text-sm"

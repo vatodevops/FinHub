@@ -40,7 +40,26 @@ async function fetchVoid(path: string, init?: RequestInit): Promise<void> {
   }
 }
 
-export type User = { id: string; email: string; full_name?: string | null; is_active: boolean; };
+export type User = {
+  id: string;
+  email: string;
+  email_verified: boolean;
+  full_name?: string | null;
+  picture_url?: string | null;
+  locale?: string | null;
+  auth_provider: 'local' | 'google' | string;
+  is_active: boolean;
+  last_login_at?: string | null;
+};
+export type AuthSession = {
+  id: string;
+  created_at: string;
+  expires_at: string;
+  last_seen_at?: string | null;
+  user_agent?: string | null;
+  ip_address?: string | null;
+  current: boolean;
+};
 export type Overview = {
   today: string;
   account_count: number;
@@ -77,7 +96,10 @@ export const api = {
     body: JSON.stringify(payload),
   }),
   logout: () => fetchVoid('/auth/logout', { method: 'POST' }),
+  logoutAll: () => fetchVoid('/auth/logout-all', { method: 'POST' }),
   me: () => fetchJson<User>('/auth/me'),
+  listSessions: () => fetchJson<AuthSession[]>('/auth/sessions'),
+  revokeSession: (id: string) => fetchVoid(`/auth/sessions/${id}`, { method: 'DELETE' }),
 
   overview: () => fetchJson<Overview>('/overview'),
   accounts: () => fetchJson<Account[]>('/accounts'),

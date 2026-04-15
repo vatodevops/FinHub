@@ -18,6 +18,7 @@ class BankConnectionStatus(str, enum.Enum):
 class BankConnection(UUIDTimestampMixin, Base):
     __tablename__ = "bank_connections"
 
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     institution_id: Mapped[str | None] = mapped_column(ForeignKey("institutions.id"))
     provider: Mapped[str] = mapped_column(String(100), nullable=False)
     requisition_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)

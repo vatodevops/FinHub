@@ -49,6 +49,7 @@ class LinkType(str, enum.Enum):
 class Institution(UUIDTimestampMixin, Base):
     __tablename__ = "institutions"
 
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     provider: Mapped[str] = mapped_column(String(100), nullable=False)
     external_id: Mapped[str | None] = mapped_column(String(255))
@@ -61,6 +62,7 @@ class Account(UUIDTimestampMixin, Base):
     __tablename__ = "accounts"
     __table_args__ = (UniqueConstraint("institution_id", "external_id", name="uq_account_institution_external"),)
 
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     institution_id: Mapped[str] = mapped_column(ForeignKey("institutions.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     iban_masked: Mapped[str | None] = mapped_column(String(64))
@@ -75,8 +77,9 @@ class Account(UUIDTimestampMixin, Base):
 
 class Transaction(UUIDTimestampMixin, Base):
     __tablename__ = "transactions"
-    __table_args__ = (UniqueConstraint("source_type", "source_id", name="uq_transaction_source"),)
+    __table_args__ = (UniqueConstraint("user_id", "source_type", "source_id", name="uq_transaction_user_source"),)
 
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"), nullable=False)
     category_id: Mapped[str | None] = mapped_column(ForeignKey("categories.id"))
     source_type: Mapped[SourceType] = mapped_column(Enum(SourceType, name="transaction_source_type"), nullable=False)
@@ -107,6 +110,7 @@ class Transaction(UUIDTimestampMixin, Base):
 class TransactionLink(UUIDTimestampMixin, Base):
     __tablename__ = "transaction_links"
 
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     left_transaction_id: Mapped[str] = mapped_column(ForeignKey("transactions.id"), nullable=False)
     right_transaction_id: Mapped[str] = mapped_column(ForeignKey("transactions.id"), nullable=False)
     link_type: Mapped[LinkType] = mapped_column(Enum(LinkType, name="link_type"), nullable=False)

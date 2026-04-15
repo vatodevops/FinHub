@@ -5,8 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.api.deps.auth import require_auth
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
+from app.models.auth import User
 from app.models.entities import (
     Account,
     AccountKind,
@@ -24,6 +26,7 @@ router = APIRouter()
 def _account_to_response(account: Account, db: Session) -> dict:
     balance = db.query(func.coalesce(func.sum(Transaction.amount), 0)).filter(
         Transaction.account_id == account.id,
+        Transaction.user_id == account.user_id,
         Transaction.status != TransactionStatus.duplicate,
     ).scalar()
     return {
@@ -39,32 +42,54 @@ def _account_to_response(account: Account, db: Session) -> dict:
     }
 
 
-def _get_or_create_institution(db: Session, name: str) -> Institution:
-    institution = db.query(Institution).filter(Institution.name == name).first()
+def _get_or_create_institution(db: Session, user_id, name: str) -> Institution:
+    institution = (
+        db.query(Institution)
+        .filter(Institution.user_id == user_id, Institution.name == name)
+        .first()
+    )
     if not institution:
-        institution = Institution(name=name, provider="manual", source_type=SourceType.bank)
+        institution = Institution(
+            user_id=user_id,
+            name=name,
+            provider="manual",
+            source_type=SourceType.bank,
+        )
         db.add(institution)
         db.flush()
     return institution
 
 
 @router.get("/accounts", response_model=list[AccountResponse])
-def list_accounts(db: Session = Depends(get_db)) -> list[AccountResponse]:
-    accounts = db.query(Account).order_by(Account.name.asc()).all()
+def list_accounts(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+) -> list[AccountResponse]:
+    accounts = (
+        db.query(Account)
+        .filter(Account.user_id == user.id)
+        .order_by(Account.name.asc())
+        .all()
+    )
     return [_account_to_response(a, db) for a in accounts]
 
 
 @router.post("/accounts", response_model=AccountResponse, status_code=201)
-def create_account(payload: CreateAccountRequest, db: Session = Depends(get_db)) -> AccountResponse:
+def create_account(
+    payload: CreateAccountRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+) -> AccountResponse:
     try:
         kind = AccountKind(payload.kind)
     except ValueError:
         valid = [k.value for k in AccountKind]
         raise HTTPException(status_code=422, detail=f"Tipo invalido. Valores permitidos: {valid}")
 
-    institution = _get_or_create_institution(db, payload.institution_name or "Manual")
+    institution = _get_or_create_institution(db, user.id, payload.institution_name or "Manual")
 
     account = Account(
+        user_id=user.id,
         institution_id=institution.id,
         name=payload.name,
         kind=kind,
@@ -77,6 +102,7 @@ def create_account(payload: CreateAccountRequest, db: Session = Depends(get_db))
 
     if payload.initial_balance != Decimal("0.00"):
         initial_tx = Transaction(
+            user_id=user.id,
             account_id=account.id,
             source_type=SourceType.bank,
             source_id=f"initial-{account.id}",
@@ -99,8 +125,13 @@ def update_account(
     account_id: uuid.UUID,
     payload: UpdateAccountRequest,
     db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
 ) -> AccountResponse:
-    account = db.query(Account).filter(Account.id == account_id).one_or_none()
+    account = (
+        db.query(Account)
+        .filter(Account.id == account_id, Account.user_id == user.id)
+        .one_or_none()
+    )
     if not account:
         raise NotFoundError("account_not_found")
 
@@ -118,7 +149,7 @@ def update_account(
     if payload.is_active is not None:
         account.is_active = payload.is_active
     if payload.institution_name is not None:
-        institution = _get_or_create_institution(db, payload.institution_name)
+        institution = _get_or_create_institution(db, user.id, payload.institution_name)
         account.institution_id = institution.id
 
     db.commit()
@@ -127,10 +158,21 @@ def update_account(
 
 
 @router.delete("/accounts/{account_id}", status_code=204)
-def delete_account(account_id: uuid.UUID, db: Session = Depends(get_db)):
-    account = db.query(Account).filter(Account.id == account_id).one_or_none()
+def delete_account(
+    account_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    account = (
+        db.query(Account)
+        .filter(Account.id == account_id, Account.user_id == user.id)
+        .one_or_none()
+    )
     if not account:
         raise NotFoundError("account_not_found")
-    db.query(Transaction).filter(Transaction.account_id == account_id).delete()
+    db.query(Transaction).filter(
+        Transaction.account_id == account_id,
+        Transaction.user_id == user.id,
+    ).delete()
     db.delete(account)
     db.commit()

@@ -1,8 +1,12 @@
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
+from sqlalchemy.orm import Session
+
+from app.core.security import hash_password
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
+from app.models.auth import User
 from app.models.categories import Category
 from app.models.entities import (
     Account,
@@ -46,30 +50,53 @@ DEFAULT_CATEGORIES = [
 ]
 
 
+def seed_default_categories(db: Session, user_id) -> None:
+    existing_slugs = {
+        c.slug
+        for c in db.query(Category).filter(Category.user_id == user_id).all()
+    }
+    for name, slug, color, icon in DEFAULT_CATEGORIES:
+        if slug in existing_slugs:
+            continue
+        db.add(Category(user_id=user_id, name=name, slug=slug, color=color, icon=icon))
+    db.flush()
+
+
 def seed() -> None:
     if str(engine.url).startswith("sqlite"):
         Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        if db.query(Category).count() < len(DEFAULT_CATEGORIES):
-            existing_slugs = {c.slug for c in db.query(Category).all()}
-            for name, slug, color, icon in DEFAULT_CATEGORIES:
-                if slug not in existing_slugs:
-                    db.add(Category(name=name, slug=slug, color=color, icon=icon))
+        demo = db.query(User).filter(User.email == "demo@finhub.local").one_or_none()
+        if demo is None:
+            demo = User(
+                email="demo@finhub.local",
+                full_name="Demo",
+                password_hash=hash_password("demo1234"),
+                is_active=True,
+            )
+            db.add(demo)
             db.flush()
 
-        if db.query(Institution).count() > 0:
+        seed_default_categories(db, demo.id)
+
+        if db.query(Institution).filter(Institution.user_id == demo.id).count() > 0:
             db.commit()
             return
 
-        curve = Institution(name="Curve", provider="manual", source_type=SourceType.curve)
-        bbva = Institution(name="BBVA", provider="manual", source_type=SourceType.bank)
+        curve = Institution(user_id=demo.id, name="Curve", provider="manual", source_type=SourceType.curve)
+        bbva = Institution(user_id=demo.id, name="BBVA", provider="manual", source_type=SourceType.bank)
         db.add_all([curve, bbva])
         db.flush()
 
-        shopping = db.query(Category).filter(Category.slug == "compras").first()
+        shopping = (
+            db.query(Category)
+            .filter(Category.user_id == demo.id, Category.slug == "compras")
+            .first()
+        )
 
         curve_account = Account(
+            user_id=demo.id,
             institution_id=curve.id,
             name="Curve Main",
             currency="EUR",
@@ -78,6 +105,7 @@ def seed() -> None:
             is_active=True,
         )
         bbva_account = Account(
+            user_id=demo.id,
             institution_id=bbva.id,
             name="BBVA Cuenta",
             currency="EUR",
@@ -91,6 +119,7 @@ def seed() -> None:
 
         now = datetime.now(UTC)
         curve_tx = Transaction(
+            user_id=demo.id,
             account_id=curve_account.id,
             category_id=shopping.id if shopping else None,
             source_type=SourceType.curve,
@@ -105,6 +134,7 @@ def seed() -> None:
             status=TransactionStatus.booked,
         )
         bank_tx = Transaction(
+            user_id=demo.id,
             account_id=bbva_account.id,
             category_id=shopping.id if shopping else None,
             source_type=SourceType.bank,
@@ -122,6 +152,7 @@ def seed() -> None:
         db.flush()
 
         internet = RecurringSeries(
+            user_id=demo.id,
             account_id=bbva_account.id,
             name="Internet",
             merchant_clean="Movistar",
@@ -139,6 +170,7 @@ def seed() -> None:
         db.flush()
         db.add(
             RecurringOccurrence(
+                user_id=demo.id,
                 series_id=internet.id,
                 expected_date=date(now.year, now.month, 3),
                 expected_amount=Decimal("52.30"),
@@ -148,6 +180,7 @@ def seed() -> None:
 
         db.add(
             ManualPlannedItem(
+                user_id=demo.id,
                 account_id=None,
                 name="Peluqueria",
                 merchant_hint="Peluqueria barrio",

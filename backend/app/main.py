@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routers import router
 from app.core.config import settings
+from app.core.csrf import OriginCheckMiddleware
 from app.core.exceptions import AppError
 from app.core.logging import RequestLoggingMiddleware, setup_logging
 
@@ -14,6 +15,7 @@ logger = logging.getLogger("finhub")
 
 app = FastAPI(title=settings.app_name)
 
+app.add_middleware(OriginCheckMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
