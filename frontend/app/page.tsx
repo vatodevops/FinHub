@@ -20,27 +20,54 @@ export default function HomePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [calendar, setCalendar] = useState<RecurringOccurrence[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const now = new Date();
-    Promise.all([
-      api.overview(),
-      api.transactions(),
-      api.recurringCalendar(),
-      api.budgets(now.getMonth() + 1, now.getFullYear()),
-    ]).then(([o, t, c, b]) => {
+    let cancelled = false;
+    (async () => {
+      const settle = async <T,>(p: Promise<T>, fallback: T, label: string): Promise<T> => {
+        try {
+          return await p;
+        } catch (err) {
+          console.error(`Dashboard: ${label} falló`, err);
+          if (!cancelled) setError((prev) => prev ?? `${label}: ${(err as Error).message}`);
+          return fallback;
+        }
+      };
+      const [o, t, c, b] = await Promise.all([
+        settle(api.overview(), null, 'overview'),
+        settle(api.transactions(), [] as Transaction[], 'transactions'),
+        settle(api.recurringCalendar(), [] as RecurringOccurrence[], 'calendar'),
+        settle(api.budgets(now.getMonth() + 1, now.getFullYear()), [] as Budget[], 'budgets'),
+      ]);
+      if (cancelled) return;
       setOverview(o);
       setTransactions(filterVisibleTransactions(t));
       setCalendar(c);
       setBudgets(b);
-    });
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  if (!overview) {
+  if (loading) {
     return (
       <div className="max-w-[1440px] mx-auto">
         <Topbar title="Dashboard" subtitle="Cargando..." />
         <div className="flex items-center justify-center py-20 text-muted-foreground">Cargando datos...</div>
+      </div>
+    );
+  }
+
+  if (!overview) {
+    return (
+      <div className="max-w-[1440px] mx-auto">
+        <Topbar title="Dashboard" subtitle="No se pudieron cargar los datos." />
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Error al cargar el dashboard{error ? `: ${error}` : ''}.
+        </div>
       </div>
     );
   }
