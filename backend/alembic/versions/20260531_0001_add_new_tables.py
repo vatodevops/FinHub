@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.create_table(
         "asset_groups",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("position", sa.Integer(), nullable=False, server_default="0"),
@@ -38,7 +38,7 @@ def upgrade() -> None:
     op.create_table(
         "assets",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("type", sa.Enum("real_estate", "vehicle", "valuable", "investment", "other", name="asset_type"), nullable=False),
         sa.Column("currency", sa.String(3), nullable=False, server_default="EUR"),
@@ -89,7 +89,7 @@ def upgrade() -> None:
     op.create_table(
         "goals",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("target_amount", sa.Numeric(14, 2), nullable=False),
         sa.Column("current_amount", sa.Numeric(14, 2), nullable=False, server_default="0"),
@@ -115,7 +115,7 @@ def upgrade() -> None:
     op.create_table(
         "rules",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("conditions_op", sa.String(3), nullable=False, server_default="and"),
         sa.Column("conditions", sa.JSON(), nullable=False, server_default="[]"),
@@ -133,7 +133,7 @@ def upgrade() -> None:
     op.create_table(
         "transaction_splits",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("transaction_id", sa.Uuid(), nullable=False),
         sa.Column("category_id", sa.Uuid(), nullable=True),
         sa.Column("amount", sa.Numeric(14, 2), nullable=False),
@@ -153,7 +153,7 @@ def upgrade() -> None:
     op.create_table(
         "two_factor_secrets",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("secret", sa.String(), nullable=False, server_default=""),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default="0"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
