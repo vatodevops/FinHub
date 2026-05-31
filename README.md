@@ -8,6 +8,10 @@
 [![Frontend: Next.js](https://img.shields.io/badge/frontend-Next.js_15-000000?style=flat-square)](https://nextjs.org)
 [![DB: PostgreSQL](https://img.shields.io/badge/db-PostgreSQL-4169E1?style=flat-square)](https://postgresql.org)
 
+<p align="center">
+  <img src="assets/finhub-login.png" alt="FinHub Login" width="700">
+</p>
+
 ---
 
 ## Features
