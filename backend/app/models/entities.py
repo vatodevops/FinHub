@@ -105,6 +105,9 @@ class Transaction(UUIDTimestampMixin, Base):
     incoming_links: Mapped[list["TransactionLink"]] = relationship(
         back_populates="right_transaction", foreign_keys="TransactionLink.right_transaction_id"
     )
+    splits: Mapped[list["TransactionSplit"]] = relationship(
+        back_populates="transaction", cascade="all, delete-orphan"
+    )
 
 
 class TransactionLink(UUIDTimestampMixin, Base):

@@ -21,3 +21,4 @@ class Category(UUIDTimestampMixin, Base):
 
     parent = relationship("Category", remote_side="Category.id", backref="children")
     transactions = relationship("Transaction", back_populates="category")
+    splits = relationship("TransactionSplit", back_populates="category")

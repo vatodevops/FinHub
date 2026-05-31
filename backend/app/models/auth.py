@@ -22,6 +22,7 @@ class User(UUIDTimestampMixin, Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     sessions: Mapped[list["AuthSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    two_factor_secret: Mapped["TwoFactorSecret | None"] = relationship(back_populates="user")
 
 
 class AuthSession(UUIDTimestampMixin, Base):
