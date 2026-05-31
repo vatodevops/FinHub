@@ -19,7 +19,22 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # ### assets
+    # ### asset_groups (must come before assets which references it)
+    op.create_table(
+        "asset_groups",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("name", sa.String(255), nullable=False),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("position", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index("ix_asset_groups_user_id", "asset_groups", ["user_id"])
+
+    # ### assets (references asset_groups)
     op.create_table(
         "assets",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -54,21 +69,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_assets_user_id", "assets", ["user_id"])
-
-    # ### asset_groups
-    op.create_table(
-        "asset_groups",
-        sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("user_id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(255), nullable=False),
-        sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("position", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index("ix_asset_groups_user_id", "asset_groups", ["user_id"])
 
     # ### asset_values
     op.create_table(
