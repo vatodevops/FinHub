@@ -1,3 +1,4 @@
+"""Bank sync logic — connects to any BankConnector and persists accounts + transactions."""
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -6,17 +7,35 @@ from sqlalchemy.orm import Session
 
 from app.models.bank_connection import BankConnection, BankConnectionStatus
 from app.models.entities import Account, AccountKind, Institution, SourceType, Transaction, TransactionStatus
+from app.services.connectors.banks.base import BankConnector
 from app.services.connectors.banks.gocardless import GoCardlessBankConnector
+from app.services.connectors.banks.simplefin import SimpleFINBankConnector
+
+
+def connector_from_connection(connection: BankConnection) -> BankConnector:
+    """Return the appropriate BankConnector for a given BankConnection."""
+    if connection.provider == "simplefin":
+        connector = SimpleFINBankConnector()
+        connector._access_url = connection.link or ""
+        return connector
+    return GoCardlessBankConnector()
+
+
+def connection_ref(connection: BankConnection) -> str:
+    """Return the connection reference string for the connector."""
+    if connection.provider == "simplefin":
+        return connection.link or ""
+    return connection.requisition_id
 
 
 async def sync_bank_connection(db: Session, connection: BankConnection) -> dict:
     user_id = connection.user_id
-    connector = GoCardlessBankConnector()
-    requisition = await connector.client.get_requisition(connection.requisition_id)
-    connection.link = requisition.get("link")
-    accounts = await connector.list_accounts(connection.requisition_id)
+    connector = connector_from_connection(connection)
+    ref = connection_ref(connection)
 
-    institution = _ensure_institution(db, connection, requisition)
+    accounts = await connector.list_accounts(ref)
+
+    institution = _ensure_institution(db, connection)
     created_accounts = 0
     upserted_transactions = 0
 
@@ -44,7 +63,7 @@ async def sync_bank_connection(db: Session, connection: BankConnection) -> dict:
             created_accounts += 1
 
         txs = await connector.list_transactions(
-            connection.requisition_id,
+            ref,
             normalized_account.external_id,
             from_date=(datetime.now(UTC) - timedelta(days=120)).date(),
         )
@@ -99,7 +118,7 @@ async def sync_bank_connection(db: Session, connection: BankConnection) -> dict:
     }
 
 
-def _ensure_institution(db: Session, connection: BankConnection, requisition: dict) -> Institution:
+def _ensure_institution(db: Session, connection: BankConnection) -> Institution:
     user_id = connection.user_id
     institution = None
     if connection.institution_id:
@@ -109,7 +128,7 @@ def _ensure_institution(db: Session, connection: BankConnection, requisition: di
             .one_or_none()
         )
     if institution is None:
-        external_id = connection.institution_external_id or requisition.get("institution_id")
+        external_id = connection.institution_external_id
         institution = (
             db.query(Institution)
             .filter(Institution.user_id == user_id)
@@ -120,9 +139,9 @@ def _ensure_institution(db: Session, connection: BankConnection, requisition: di
     if institution is None:
         institution = Institution(
             user_id=user_id,
-            name=connection.institution_name or requisition.get("institution_id") or "Bank",
+            name=connection.institution_name or connection.reference or "Bank",
             provider=connection.provider,
-            external_id=connection.institution_external_id or requisition.get("institution_id"),
+            external_id=connection.institution_external_id,
             source_type=SourceType.bank,
         )
         db.add(institution)
