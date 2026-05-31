@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import enum
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -96,6 +97,9 @@ class Asset(UUIDTimestampMixin, Base):
         Enum(AssetSource, name="asset_source"), nullable=False, default=AssetSource.manual
     )
     external_metadata: Mapped[dict | None] = mapped_column(Text, default=None)
+    group_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("asset_groups.id", ondelete="SET NULL"), default=None
+    )
 
     # Relationships
     values: Mapped[list[AssetValue]] = relationship(
